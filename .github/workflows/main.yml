@@ -1,4 +1,4 @@
-name: Deploy to ECS
+name: Docker Build and Push
 
 on:
   push:
@@ -7,56 +7,44 @@ on:
 
 env:
   AWS_REGION: eu-central-1
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   ECR_REPOSITORY: ping-pong-production-ecr
   ECS_CLUSTER: ping-pong-production-cluster
   ECS_SERVICE: ping-pong-production-ecs-service
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
 
-      - name: Set up Docker Buildx cache
-        uses: docker/setup-buildx-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
 
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{env.AWS_REGION}}
 
-      - name: Get ECR password (temporary)
-        id: get-ecr-password
-        run: echo "::set-output name=password::$(aws ecr get-login-password)"
-        
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v1
-        with:
-          context: .
-          push: true
-          tags: ${{ env.ECR_REPOSITORY }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          provenance: false
-          registry: ${{ steps.login-ecr.outputs.registry }}
-          repository: ${{ env.ECR_REPOSITORY}}
-          username: AWS  # temporary
-          password: ${{ steps.get-ecr-password.outputs.password }}  # temporary
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Force deployment
-        run: |
+    - name: Build and push Docker image to ECR
+      run: |
+        docker buildx create --use --name mybuilder
+        docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache --push -t ${{ steps.login-ecr.outputs.registry }}/${{env.ECR_REPOSITORY}}:latest .
+    - name: Force deployment
+      run: |
           aws ecs update-service --cluster ${{env.ECS_CLUSTER}} --service ${{env.ECS_SERVICE}} --force-new-deployment
-        id: deploy-ecs
+      id: deploy-ecs
       
-      - name: Check deployment status
-        run: |
+    - name: Check deployment status
+      run: |
           echo "Deployment failed: ${{ steps.deploy-ecs.outputs.deployment-status }}"
