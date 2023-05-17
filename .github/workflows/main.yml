@@ -1,48 +1,28 @@
-name: Deploy to ECR v2
- 
+name: CI/CD Pipeline
+
 on:
   push:
     branches:
       - main
 
 jobs:
-  build:
-    name: Build Image
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: eu-central-1
+      - name: Configure Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      - name: Build and push Docker image
+        run: |
+          docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache --push -t ping-pong-production-ecr:latest .
 
-    - name: Install Docker Buildx
-      uses: docker/setup-buildx-action@v1
-
-    - name: Login to Docker registry
-      uses: docker/login-action@v1
-      with:
-        registry: ${{ steps.login-ecr.outputs.registry }}
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Build, tag, and push image to Amazon ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ping-pong-production-ecr
-        IMAGE_TAG: latest
-      run: |
-        docker buildx create --use --name mybuilder
-        docker buildx build --cache-from=type=registry,ref=mybuilder --cache-to=type=registry,ref=mybuilder --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker buildx use default
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker buildx rm mybuilder
+      - name: Deploy to ECS
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 667332577260.dkr.ecr.eu-central-1.amazonaws.com/ping-pong-production-ecr
+          aws ecs update-service --cluster ping-pong-production-cluster --service ping-pong-production-ecs-service --force-new-deployment
