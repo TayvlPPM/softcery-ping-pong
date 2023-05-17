@@ -7,11 +7,9 @@ aws_region        = YOUR_REGION
 aws_access_key    = YOUR_AWS_ACCESS_KEY
 aws_secret_key    = YOUR_AWS_SECRET_KEY
 
- these are zones and subnets examples
 availability_zones = [LIST_OF_AVAILABILITY_ZONES]
 public_subnets     = [LIST OF PUBLIC SUBNETS CIDR BLOCKS]
 
- these are used for tags
 app_name        = "your app name"
 app_environment = "any environment name(prod, dev, etc)"
 
