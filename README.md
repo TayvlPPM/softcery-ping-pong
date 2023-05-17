@@ -16,8 +16,8 @@ app_environment = "any environment name(prod, dev, etc)"
 Then you can run this terraform script.
 After it execution you will see your vpn public ip and your load balancer dns.
 
-To setup OpenVPN you need to find "key.pem" file in root folder of current disk. Then, using this key and vpn public ip do the ssh connection to your vpn server.
-Switch to a root user, and in open "./root/client.ovpn" file, this is your openvpn configuration. Copy all its content to .ovpn file on your local computer. Now you can use it to connect to vpn server.
+To setup OpenVPN you need to find "key.pem" file in root folder of current disk. Then, using this key and vpn public ip do the ssh connection as ubuntu user to your vpn server.
+Switch to a root user, and open "./root/client.ovpn" file, this is your openvpn configuration. Copy all its content to .ovpn file on your local computer. Now you can use it to connect to vpn server.
 To check your server running, just turn on your OpvenVPN, and enter your_load_balancer_dns/ping in your browser.
 
-Don't forget to run terraform destroy to save your AWS resources.
+Don't forget to run terraform destroy to save your money.
