@@ -24,9 +24,6 @@ jobs:
     - name: Install Docker Buildx
       uses: docker/setup-buildx-action@v1
 
-    - name: Create Buildx Cache Directory
-      run: mkdir -p /tmp/.buildx-cache
-
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
@@ -37,7 +34,8 @@ jobs:
         ECR_REPOSITORY: ping-pong-production-ecr
         IMAGE_TAG: latest
       run: |
-        docker buildx create --use
-        docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker buildx create --use --name mybuilder
+        docker buildx build --cache-from=type=registry,ref=mybuilder --cache-to=type=registry,ref=mybuilder --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker buildx use default
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker buildx rm mybuilder
