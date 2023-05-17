@@ -42,8 +42,8 @@ jobs:
           context: .
           push: true
           tags: latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+         # cache-from: type=gha
+         # cache-to: type=gha,mode=max
          # cache-from: type=gha,scope=repository,keys=my-builder-cache-{{ runner.os }}-{{ env.GITHUB_SHA }}
          # cache-to: type=gha,scope=repository,keys=my-builder-cache-{{ runner.os }}-{{ env.GITHUB_SHA }}
          # builder: my-builder
