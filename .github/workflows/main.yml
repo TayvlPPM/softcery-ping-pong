@@ -48,7 +48,7 @@ jobs:
     - name: Build and push Docker image to ECR
       run: |
         docker buildx create --use --name mybuilder
-        docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache --push -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest .
+        docker buildx build cache-from: type=gha,scope=repository,keys=my-builder-cache-{{ runner.os }}-{{ env.GITHUB_SHA }} cache-to: type=gha,scope=repository,keys=my-builder-cache-{{ runner.os }}-{{ env.GITHUB_SHA }} ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest .
     
     - name: Save Buildx cache
       uses: actions/cache@v2
