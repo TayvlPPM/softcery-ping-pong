@@ -35,14 +35,25 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
-      
-    - name: Create cache directory
-      run: mkdir -p /tmp/.buildx-cache
+
+    - name: Restore Buildx cache
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-cache-${{ hashFiles('**/Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-cache-
 
     - name: Build and push Docker image to ECR
       run: |
         docker buildx create --use --name mybuilder
-        docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache --push -t ${{ steps.login-ecr.outputs.registry }}/${{env.ECR_REPOSITORY}}:latest .
+        docker buildx build --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache --push -t ${{ steps.login-ecr.outputs.registry }}/${{env.ECR_REPOSITORY}}:latest
+
+    - name: Save Buildx cache
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-cache-${{ hashFiles('**/Dockerfile') }}
     - name: Force deployment
       run: |
           aws ecs update-service --cluster ${{env.ECS_CLUSTER}} --service ${{env.ECS_SERVICE}} --force-new-deployment
